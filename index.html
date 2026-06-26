@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Crypto Bot Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0e1117; color: white; padding: 20px; text-align: center; }
+        .card { background: #161b22; border-radius: 10px; padding: 20px; margin: 15px auto; max-width: 600px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1 { color: #58a6ff; }
+        .metric { font-size: 2em; font-weight: bold; margin: 10px 0; }
+        .green { color: #3fb950; }
+        .red { color: #f85149; }
+        .blue { color: #58a6ff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; border-bottom: 1px solid #30363d; text-align: left; }
+        th { color: #8b949e; }
+        .refresh-btn { background: #238636; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; margin-top: 20px; }
+        .refresh-btn:hover { background: #2ea043; }
+        #last-update { color: #8b949e; font-size: 0.9em; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🤖 Crypto Bot Pro - Dashboard</h1>
+    
+    <div class="card">
+        <h2>💰 Estado de la Cuenta</h2>
+        <div class="metric blue" id="balance">$0.00</div>
+        <p>Balance Disponible</p>
+        
+        <div class="metric green" id="equity">$0.00</div>
+        <p>Patrimonio Total (Balance + BTC)</p>
+        
+        <div class="metric" id="holdings">0.000000 BTC</div>
+        <p>Bitcoin en Cartera</p>
+    </div>
+
+    <div class="card">
+        <h2>📋 Últimas Operaciones</h2>
+        <table id="trades-table">
+            <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Acción</th>
+                    <th>Precio</th>
+                    <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody id="trades-body">
+                <!-- Aquí se cargarán las operaciones -->
+            </tbody>
+        </table>
+    </div>
+
+    <button class="refresh-btn" onclick="loadData()">🔄 Actualizar Datos</button>
+    <p id="last-update">Cargando...</p>
+
+    <script>
+        // URL directa al archivo raw de GitHub
+        const DATA_URL = 'https://raw.githubusercontent.com/chitomax/criptobot/main/bot_data.json';
+
+        async function loadData() {
+            try {
+                // Añadimos timestamp para evitar caché
+                const response = await fetch(DATA_URL + '?t=' + new Date().getTime());
+                const data = await response.json();
+                
+                // Actualizar métricas
+                document.getElementById('balance').innerText = '$' + data.balance.toLocaleString('en-US', {minimumFractionDigits: 2});
+                document.getElementById('holdings').innerText = data.holdings.toFixed(6) + ' BTC';
+                
+                // Calcular patrimonio aproximado (usando último precio de trade o estimado)
+                let lastPrice = 60000; // Precio fallback
+                if(data.trades && data.trades.length > 0) {
+                    lastPrice = data.trades[data.trades.length - 1].price;
+                }
+                const equity = data.balance + (data.holdings * lastPrice);
+                document.getElementById('equity').innerText = '$' + equity.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+                // Actualizar tabla de trades (últimos 10)
+                const tbody = document.getElementById('trades-body');
+                tbody.innerHTML = '';
+                
+                const recentTrades = data.trades.slice(-10).reverse();
+                recentTrades.forEach(trade => {
+                    const row = document.createElement('tr');
+                    const isBuy = trade.action === 'BUY';
+                    row.innerHTML = `
+                        <td>${new Date(trade.time).toLocaleString()}</td>
+                        <td class="${isBuy ? 'green' : 'red'}">${isBuy ? '🟢 COMPRA' : '🔴 VENTA'}</td>
+                        <td>$${trade.price.toLocaleString()}</td>
+                        <td>${trade.qty.toFixed(6)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById('last-update').innerText = 'Última actualización: ' + new Date().toLocaleTimeString();
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                document.getElementById('last-update').innerText = 'Error al cargar datos. Espera a que el bot corra.';
+            }
+        }
+
+        // Cargar al iniciar
+        loadData();
+    </script>
+</body>
+</html>
