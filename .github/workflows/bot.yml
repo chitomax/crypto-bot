@@ -2,8 +2,8 @@ name: Crypto Bot
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Ejecuta cada hora
-  workflow_dispatch:      # Permite ejecutarlo manualmente
+    - cron: '0 * * * *'  # Cada hora
+  workflow_dispatch:      # Manualmente
 
 jobs:
   run-bot:
@@ -23,6 +23,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests
     
+    - name: Create dummy file if missing
+      run: |
+        if [ ! -f bot_data.json ]; then echo '{"balance": 10000.0, "holdings": 0, "avg_price": 0, "trades": []}' > bot_data.json; fi
+
     - name: Run bot
       run: python bot_trading.py
     
